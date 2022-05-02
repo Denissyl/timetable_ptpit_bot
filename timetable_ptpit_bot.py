@@ -124,7 +124,7 @@ def start(message):
     result = db_object.fetchone()
 
     if not result:
-        db_object.execute("INSERT INTO users(id, username) VALUES (%s, %s)", (user_id, username))
+        db_object.execute("INSERT INTO users(id, username, subgroup) VALUES (%s, %s, %s)", (user_id, username, -1))
         db_connection.commit()
 
     bot.send_message(message.chat.id,
