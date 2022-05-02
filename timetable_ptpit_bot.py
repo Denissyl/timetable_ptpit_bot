@@ -6,6 +6,8 @@ import telebot
 from telebot import types
 import json
 
+import psycopg2
+
 import datetime
 import requests
 from bs4 import BeautifulSoup
@@ -13,6 +15,11 @@ from bs4 import BeautifulSoup
 bot = telebot.TeleBot("5130698267:AAErP_4sPv4j7moAzqW7LZeePEWtG6CWw38")
 TIMEZONE = 'Asia/Yekaterinburg'
 TIMEZONE_COMMON_NAME = 'Asia/Yekaterinburg'
+
+DB_URI = "postgres://elbthyzcnbsebw:1f94045c08512cf2aa72f7cdcdf3dc123f5e2689b02761953725502618352e12@ec2-34-247-172-149.eu-west-1.compute.amazonaws.com:5432/dc0i6ie87j51p"
+
+db_connection = psycopg2.connect(DB_URI, sslmode="require")
+db_object = db_connection.cursor()
 
 group = ''
 subgroup = -1
@@ -111,6 +118,15 @@ def menu_keyboard():
 
 @bot.message_handler(commands=['start'])
 def start(message):
+    user_id = message.from_user.id
+    username = message.from_user.username
+    db_object.execute(f"SELECT id FROM users WHERE id = {user_id}")
+    result = db_object.fetchone()
+
+    if not result:
+        db_object.execute("INSERT INTO users(id, username) VALUES (%s, %s)", (user_id, username))
+        db_connection.commit()
+
     bot.send_message(message.chat.id,
                      text="Привет, {0.first_name}! для начала работы выберите свою группу и подгруппу".format(
                          message.from_user), reply_markup=menu_keyboard())
