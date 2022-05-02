@@ -21,10 +21,10 @@ DB_URI = "postgres://elbthyzcnbsebw:1f94045c08512cf2aa72f7cdcdf3dc123f5e2689b027
 db_connection = psycopg2.connect(DB_URI, sslmode="require")
 db_object = db_connection.cursor()
 
-group = ''
-subgroup = -1
-group_id = 0
-news_status = False
+# group = ''
+# subgroup = -1
+# group_id = 0
+# news_status = False
 
 time_of_lessons = {1: "8:30 - 10:05",
                    2: "10:25 - 12:00",
@@ -172,7 +172,7 @@ def list_group(message):
 
 
 def get_group(message):
-    global group, group_id
+    # global group, group_id
     bot.send_message(message.chat.id, text="Выбрана группа: " + message.text,
                      reply_markup=menu_keyboard())
     group = message.text
@@ -182,10 +182,14 @@ def get_group(message):
             if group_data["name"] == group:
                 group_id = group_data["id"]
 
+                user_id = message.from_user.id
+
+                db_object.execute(f"UPDATE users SET group_id = {group_id} WHERE id = {user_id}")
+                db_connection.commit()
 
 @bot.message_handler(commands=['subgroup'])
 def list_subgroup(message):
-    global subgroup
+    # global subgroup
     subgroups = ["1", "2"]
     markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
     markup.add(*subgroups)
@@ -197,12 +201,17 @@ def list_subgroup(message):
 
 
 def get_subgroup(message):
-    global subgroup
+    # global subgroup
+    user_id = message.from_user.id
     if message.text == "Не Устанавливать":
         bot.send_message(message.chat.id, text="Подгруппа не установлена", reply_markup=menu_keyboard())
         subgroup = -1
+        db_object.execute(f"UPDATE users SET subgroup = {subgroup} WHERE id = {user_id}")
+        db_connection.commit()
     else:
         subgroup = int(message.text)
+        db_object.execute(f"UPDATE users SET subgroup = {subgroup} WHERE id = {user_id}")
+        db_connection.commit()
         bot.send_message(message.chat.id, text="Выбрана подгруппа: " + message.text,
                          reply_markup=menu_keyboard())
 
@@ -252,50 +261,46 @@ def menu(message):
 def send_timetable_today(message):
     now = datetime.datetime.now()
     current_date = now.strftime("%Y-%m-%d")
-    print("https://api.ptpit.ru/timetable/groups/" + str(group_id) + "/" + now.strftime("%Y-%m-%d"))
-    with urllib.request.urlopen("https://api.ptpit.ru/timetable/groups/" + str(group_id) + "/" + current_date) as url:
-        data = json.loads(url.read().decode())
-        week = day_of_week[datetime.date(now.year, now.month, now.day).weekday()]
-        print(data)
-        print("Расписание на " + week + " (" + current_date + ")")
+    user_id = message.from_user.id
+    db_object.execute(f"SELECT group_id FROM users WHERE id = {user_id}")
+    group_id = db_object.fetchone()[0]
+    db_object.execute(f"SELECT subgroup FROM users WHERE id = {user_id}")
+    subgroup = db_object.fetchone()[0]
+    if not group_id:
         bot.send_message(message.chat.id,
-                         text="Расписание на " + week + " (" + current_date + ")")
-        for timetable in data:
-            if timetable["date"] == current_date:
-                if timetable["subgroup"] == 0:
-                    # print("Номер пары: " + str(timetable["num"]))
-                    # print("Предмет: " + timetable["subject_name"])
-                    # print("Подгруппа: " + str(timetable["subgroup"]))
-                    # print("Время: " + time_of_lessons[timetable["num"]])
-                    # print("Кабинет: " + str(timetable["room_name"]))
-                    # print("ФИО: " + timetable["teacher_surname"] + " " +
-                    #               timetable["teacher_name"] + " " +
-                    #               timetable["teacher_secondname"])
-                    bot.send_message(message.chat.id,
-                                     text=(
-                                         f'Номер пары: {str(timetable["num"])}''\n'
-                                         f'Предмет: {timetable["subject_name"]}''\n'
-                                         f'Подгруппа: Группа''\n'
-                                         f'Время: {time_of_lessons[timetable["num"]]}''\n'
-                                         f'Кабинет: {str(timetable["room_name"])}''\n'
-                                         f'ФИО: {timetable["teacher_surname"]} '
-                                         f'{timetable["teacher_name"]} '
-                                         f'{timetable["teacher_secondname"]}'
-                                     ))
-                elif timetable["subgroup"] > 0 and subgroup == -1:
-                    bot.send_message(message.chat.id,
-                                     text=(
-                                         f'Номер пары: {str(timetable["num"])}''\n'
-                                         f'Предмет: {timetable["subject_name"]}''\n'
-                                         f'Подгруппа: {str(timetable["subgroup"])}''\n'
-                                         f'Время: {time_of_lessons[timetable["num"]]}''\n'
-                                         f'Кабинет: {str(timetable["room_name"])}''\n'
-                                         f'ФИО: {timetable["teacher_surname"]} '
-                                         f'{timetable["teacher_name"]} '
-                                         f'{timetable["teacher_secondname"]}'
-                                     ))
-                elif timetable["subgroup"] > 0 and subgroup > 0:
-                    if timetable["subgroup"] == subgroup:
+                         text='Выберите группу')
+    else:
+        print("https://api.ptpit.ru/timetable/groups/" + str(group_id) + "/" + now.strftime("%Y-%m-%d"))
+        with urllib.request.urlopen("https://api.ptpit.ru/timetable/groups/" + str(group_id) + "/" + current_date) as url:
+            data = json.loads(url.read().decode())
+            week = day_of_week[datetime.date(now.year, now.month, now.day).weekday()]
+            print(data)
+            print("Расписание на " + week + " (" + current_date + ")")
+            bot.send_message(message.chat.id,
+                             text="Расписание на " + week + " (" + current_date + ")")
+            for timetable in data:
+                if timetable["date"] == current_date:
+                    if timetable["subgroup"] == 0:
+                        # print("Номер пары: " + str(timetable["num"]))
+                        # print("Предмет: " + timetable["subject_name"])
+                        # print("Подгруппа: " + str(timetable["subgroup"]))
+                        # print("Время: " + time_of_lessons[timetable["num"]])
+                        # print("Кабинет: " + str(timetable["room_name"]))
+                        # print("ФИО: " + timetable["teacher_surname"] + " " +
+                        #               timetable["teacher_name"] + " " +
+                        #               timetable["teacher_secondname"])
+                        bot.send_message(message.chat.id,
+                                         text=(
+                                             f'Номер пары: {str(timetable["num"])}''\n'
+                                             f'Предмет: {timetable["subject_name"]}''\n'
+                                             f'Подгруппа: Группа''\n'
+                                             f'Время: {time_of_lessons[timetable["num"]]}''\n'
+                                             f'Кабинет: {str(timetable["room_name"])}''\n'
+                                             f'ФИО: {timetable["teacher_surname"]} '
+                                             f'{timetable["teacher_name"]} '
+                                             f'{timetable["teacher_secondname"]}'
+                                         ))
+                    elif timetable["subgroup"] > 0 and subgroup == -1:
                         bot.send_message(message.chat.id,
                                          text=(
                                              f'Номер пары: {str(timetable["num"])}''\n'
@@ -307,6 +312,19 @@ def send_timetable_today(message):
                                              f'{timetable["teacher_name"]} '
                                              f'{timetable["teacher_secondname"]}'
                                          ))
+                    elif timetable["subgroup"] > 0 and subgroup > 0:
+                        if timetable["subgroup"] == subgroup:
+                            bot.send_message(message.chat.id,
+                                             text=(
+                                                 f'Номер пары: {str(timetable["num"])}''\n'
+                                                 f'Предмет: {timetable["subject_name"]}''\n'
+                                                 f'Подгруппа: {str(timetable["subgroup"])}''\n'
+                                                 f'Время: {time_of_lessons[timetable["num"]]}''\n'
+                                                 f'Кабинет: {str(timetable["room_name"])}''\n'
+                                                 f'ФИО: {timetable["teacher_surname"]} '
+                                                 f'{timetable["teacher_name"]} '
+                                                 f'{timetable["teacher_secondname"]}'
+                                             ))
 
 
 @bot.message_handler(commands=['send_timetable_tomorrow'])
@@ -315,42 +333,40 @@ def send_timetable_tomorrow(message):
     tomorrow_date = now + datetime.timedelta(days=1)
     tomorrow_date = tomorrow_date.strftime("%Y-%m-%d")
 
-    print("https://api.ptpit.ru/timetable/groups/" + str(group_id) + "/" + tomorrow_date)
-    with urllib.request.urlopen("https://api.ptpit.ru/timetable/groups/" + str(group_id) + "/" + tomorrow_date) as url:
-        data = json.loads(url.read().decode())
-        week = day_of_week[datetime.date(now.year, now.month, now.day + 1).weekday()]
-        print(data)
-        print("Расписание на " + tomorrow_date)
+    user_id = message.from_user.id
+    db_object.execute(f"SELECT group_id FROM users WHERE id = {user_id}")
+    group_id = db_object.fetchone()[0]
+    db_object.execute(f"SELECT subgroup FROM users WHERE id = {user_id}")
+    subgroup = db_object.fetchone()[0]
+    print(group_id)
+    print(subgroup)
+    if not group_id:
         bot.send_message(message.chat.id,
-                         text="Расписание на " + week + " (" + tomorrow_date + ")")
-        for timetable in data:
-            if timetable["date"] == tomorrow_date:
-                if timetable["subgroup"] == 0:
-                    bot.send_message(message.chat.id,
-                                     text=(
-                                         f'Номер пары: {str(timetable["num"])}''\n'
-                                         f'Предмет: {timetable["subject_name"]}''\n'
-                                         f'Подгруппа: Группа''\n'
-                                         f'Время: {time_of_lessons[timetable["num"]]}''\n'
-                                         f'Кабинет: {str(timetable["room_name"])}''\n'
-                                         f'ФИО: {timetable["teacher_surname"]} '
-                                         f'{timetable["teacher_name"]} '
-                                         f'{timetable["teacher_secondname"]}'
-                                     ))
-                elif timetable["subgroup"] > 0 and subgroup == -1:
-                    bot.send_message(message.chat.id,
-                                     text=(
-                                         f'Номер пары: {str(timetable["num"])}''\n'
-                                         f'Предмет: {timetable["subject_name"]}''\n'
-                                         f'Подгруппа: {str(timetable["subgroup"])}''\n'
-                                         f'Время: {time_of_lessons[timetable["num"]]}''\n'
-                                         f'Кабинет: {str(timetable["room_name"])}''\n'
-                                         f'ФИО: {timetable["teacher_surname"]} '
-                                         f'{timetable["teacher_name"]} '
-                                         f'{timetable["teacher_secondname"]}'
-                                     ))
-                elif timetable["subgroup"] > 0 and subgroup > 0:
-                    if timetable["subgroup"] == subgroup:
+                         text='Выберите группу')
+    else:
+        print("https://api.ptpit.ru/timetable/groups/" + str(group_id) + "/" + tomorrow_date)
+        with urllib.request.urlopen("https://api.ptpit.ru/timetable/groups/" + str(group_id) + "/" + tomorrow_date) as url:
+            data = json.loads(url.read().decode())
+            week = day_of_week[datetime.date(now.year, now.month, now.day + 1).weekday()]
+            print(data)
+            print("Расписание на " + tomorrow_date)
+            bot.send_message(message.chat.id,
+                             text="Расписание на " + week + " (" + tomorrow_date + ")")
+            for timetable in data:
+                if timetable["date"] == tomorrow_date:
+                    if timetable["subgroup"] == 0:
+                        bot.send_message(message.chat.id,
+                                         text=(
+                                             f'Номер пары: {str(timetable["num"])}''\n'
+                                             f'Предмет: {timetable["subject_name"]}''\n'
+                                             f'Подгруппа: Группа''\n'
+                                             f'Время: {time_of_lessons[timetable["num"]]}''\n'
+                                             f'Кабинет: {str(timetable["room_name"])}''\n'
+                                             f'ФИО: {timetable["teacher_surname"]} '
+                                             f'{timetable["teacher_name"]} '
+                                             f'{timetable["teacher_secondname"]}'
+                                         ))
+                    elif timetable["subgroup"] > 0 and subgroup == -1:
                         bot.send_message(message.chat.id,
                                          text=(
                                              f'Номер пары: {str(timetable["num"])}''\n'
@@ -362,53 +378,62 @@ def send_timetable_tomorrow(message):
                                              f'{timetable["teacher_name"]} '
                                              f'{timetable["teacher_secondname"]}'
                                          ))
+                    elif timetable["subgroup"] > 0 and subgroup > 0:
+                        if timetable["subgroup"] == subgroup:
+                            bot.send_message(message.chat.id,
+                                             text=(
+                                                 f'Номер пары: {str(timetable["num"])}''\n'
+                                                 f'Предмет: {timetable["subject_name"]}''\n'
+                                                 f'Подгруппа: {str(timetable["subgroup"])}''\n'
+                                                 f'Время: {time_of_lessons[timetable["num"]]}''\n'
+                                                 f'Кабинет: {str(timetable["room_name"])}''\n'
+                                                 f'ФИО: {timetable["teacher_surname"]} '
+                                                 f'{timetable["teacher_name"]} '
+                                                 f'{timetable["teacher_secondname"]}'
+                                             ))
 
 
 @bot.message_handler(commands=['send_timetable_date'])
 def send_timetable_date(message):
     date = message.text
-    print(date)
-    print(date.split("-")[0])
-    print("https://api.ptpit.ru/timetable/groups/" + str(group_id) + "/" + date)
-    with urllib.request.urlopen("https://api.ptpit.ru/timetable/groups/" + str(group_id) + "/" + date) as url:
-        data = json.loads(url.read().decode())
-        week = day_of_week[
-            datetime.date(int(date.split("-")[0]), int(date.split("-")[1]), int(date.split("-")[2])).weekday()]
-        print(data)
-        print("Расписание на " + week + " (" + date + ")")
-        bot.send_message(message.chat.id,
-                         text="Расписание на " + week + " (" + date + ")")
-        for timetable in data:
-            if timetable["date"] == date:
-                if timetable["subgroup"] == 0:
-                    print(str(timetable["num"]))
-                    print(timetable["num"])
-                    bot.send_message(message.chat.id,
-                                     text=(
-                                         f'Номер пары: {str(timetable["num"])}''\n'
-                                         f'Предмет: {timetable["subject_name"]}''\n'
-                                         f'Подгруппа: Группа''\n'
-                                         f'Время: {time_of_lessons[timetable["num"]]}''\n'
-                                         f'Кабинет: {str(timetable["room_name"])}''\n'
-                                         f'ФИО: {timetable["teacher_surname"]} '
-                                         f'{timetable["teacher_name"]} '
-                                         f'{timetable["teacher_secondname"]}'
-                                     ))
-                elif timetable["subgroup"] > 0 and subgroup == -1:
-                    bot.send_message(message.chat.id,
-                                     text=(
-                                         f'Номер пары: {str(timetable["num"])}''\n'
-                                         f'Предмет: {timetable["subject_name"]}''\n'
-                                         f'Подгруппа: {str(timetable["subgroup"])}''\n'
-                                         f'Время: {time_of_lessons[timetable["num"]]}''\n'
-                                         f'Кабинет: {str(timetable["room_name"])}''\n'
-                                         f'ФИО: {timetable["teacher_surname"]} '
-                                         f'{timetable["teacher_name"]} '
-                                         f'{timetable["teacher_secondname"]}'
-                                     ))
 
-                elif timetable["subgroup"] > 0 and subgroup > 0:
-                    if timetable["subgroup"] == subgroup:
+    user_id = message.from_user.id
+    db_object.execute(f"SELECT group_id FROM users WHERE id = {user_id}")
+    group_id = db_object.fetchone()[0]
+    db_object.execute(f"SELECT subgroup FROM users WHERE id = {user_id}")
+    subgroup = db_object.fetchone()[0]
+    if not group_id:
+        bot.send_message(message.chat.id,
+                         text='Выберите группу')
+    else:
+        print(date)
+        print(date.split("-")[0])
+        print("https://api.ptpit.ru/timetable/groups/" + str(group_id) + "/" + date)
+        with urllib.request.urlopen("https://api.ptpit.ru/timetable/groups/" + str(group_id) + "/" + date) as url:
+            data = json.loads(url.read().decode())
+            week = day_of_week[
+                datetime.date(int(date.split("-")[0]), int(date.split("-")[1]), int(date.split("-")[2])).weekday()]
+            print(data)
+            print("Расписание на " + week + " (" + date + ")")
+            bot.send_message(message.chat.id,
+                             text="Расписание на " + week + " (" + date + ")")
+            for timetable in data:
+                if timetable["date"] == date:
+                    if timetable["subgroup"] == 0:
+                        print(str(timetable["num"]))
+                        print(timetable["num"])
+                        bot.send_message(message.chat.id,
+                                         text=(
+                                             f'Номер пары: {str(timetable["num"])}''\n'
+                                             f'Предмет: {timetable["subject_name"]}''\n'
+                                             f'Подгруппа: Группа''\n'
+                                             f'Время: {time_of_lessons[timetable["num"]]}''\n'
+                                             f'Кабинет: {str(timetable["room_name"])}''\n'
+                                             f'ФИО: {timetable["teacher_surname"]} '
+                                             f'{timetable["teacher_name"]} '
+                                             f'{timetable["teacher_secondname"]}'
+                                         ))
+                    elif timetable["subgroup"] > 0 and subgroup == -1:
                         bot.send_message(message.chat.id,
                                          text=(
                                              f'Номер пары: {str(timetable["num"])}''\n'
@@ -420,6 +445,20 @@ def send_timetable_date(message):
                                              f'{timetable["teacher_name"]} '
                                              f'{timetable["teacher_secondname"]}'
                                          ))
+
+                    elif timetable["subgroup"] > 0 and subgroup > 0:
+                        if timetable["subgroup"] == subgroup:
+                            bot.send_message(message.chat.id,
+                                             text=(
+                                                 f'Номер пары: {str(timetable["num"])}''\n'
+                                                 f'Предмет: {timetable["subject_name"]}''\n'
+                                                 f'Подгруппа: {str(timetable["subgroup"])}''\n'
+                                                 f'Время: {time_of_lessons[timetable["num"]]}''\n'
+                                                 f'Кабинет: {str(timetable["room_name"])}''\n'
+                                                 f'ФИО: {timetable["teacher_surname"]} '
+                                                 f'{timetable["teacher_name"]} '
+                                                 f'{timetable["teacher_secondname"]}'
+                                             ))
 
 
 @bot.message_handler(content_types=['send_news'])
