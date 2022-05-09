@@ -4,7 +4,6 @@ from urllib import request
 
 import telebot
 from telebot import types
-import json
 
 import psycopg2
 
@@ -13,17 +12,12 @@ import requests
 from bs4 import BeautifulSoup
 
 bot = telebot.TeleBot("5130698267:AAErP_4sPv4j7moAzqW7LZeePEWtG6CWw38")
-TIMEZONE = 'Asia/Yekaterinburg'
-TIMEZONE_COMMON_NAME = 'Asia/Yekaterinburg'
 
 DB_URI = "postgres://elbthyzcnbsebw:1f94045c08512cf2aa72f7cdcdf3dc123f5e2689b02761953725502618352e12@ec2-34-247-172-149.eu-west-1.compute.amazonaws.com:5432/dc0i6ie87j51p"
 
 db_connection = psycopg2.connect(DB_URI, sslmode="require")
 db_object = db_connection.cursor()
 
-# group = ''
-# subgroup = -1
-# group_id = 0
 # news_status = False
 
 time_of_lessons = {1: "8:30 - 10:05",
@@ -126,10 +120,8 @@ def start(message):
     if not result:
         db_object.execute("INSERT INTO users(id, username, subgroup) VALUES (%s, %s, %s)", (user_id, username, -1))
         db_connection.commit()
-
     bot.send_message(message.chat.id,
-                     text="Привет, {0.first_name}! для начала работы выберите свою группу и подгруппу".format(
-                         message.from_user), reply_markup=menu_keyboard())
+                     text="Привет, {0.first_name}! для начала работы выберите свою группу и подгруппу".format(message.from_user), reply_markup=menu_keyboard())
 
 
 @bot.message_handler(commands=['help'])
@@ -140,26 +132,7 @@ def help(message):
 
 @bot.message_handler(commands=['group'])
 def list_group(message):
-    # url = 'https://timetable.ptpit.ru/'
-    # response = requests.get(url)
-    # soup = BeautifulSoup(response.text, 'lxml')
-    # quotes = soup.find_all('select')
-    #
-    # print(soup)
-
-    # html = request.urlopen(url).read()
-    # soup = BeautifulSoup(html, 'html.parser')
-    # site_json = json.loads(soup.text)
-    # print(site_json)
-    # # printing for entrezgene, do the same for name and symbol
-    # print([d.get('entrezgene') for d in site_json['hits'] if d.get('entrezgene')])
-
-    # print(quotes)
-    # for quote in quotes:
-    #     print(quote.text)
-
     groups = []
-
     markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
     with urllib.request.urlopen("https://api.ptpit.ru/groups") as url:
         data = json.loads(url.read().decode())
@@ -168,28 +141,24 @@ def list_group(message):
     markup.add(*groups)
     bot.send_message(message.chat.id, text="Выберите вашу группу",
                      reply_markup=markup)
-    bot.register_next_step_handler(message, get_group)
+    bot.register_next_step_handler(message, get_group(data))
 
 
-def get_group(message):
-    # global group, group_id
+def get_group(message, data):
     bot.send_message(message.chat.id, text="Выбрана группа: " + message.text,
                      reply_markup=menu_keyboard())
     group = message.text
-    with urllib.request.urlopen("https://api.ptpit.ru/groups") as url:
-        data = json.loads(url.read().decode())
-        for group_data in data:
-            if group_data["name"] == group:
-                group_id = group_data["id"]
-
-                user_id = message.from_user.id
-
-                db_object.execute(f"UPDATE users SET group_id = {group_id} WHERE id = {user_id}")
-                db_connection.commit()
+    # with urllib.request.urlopen("https://api.ptpit.ru/groups") as url:
+    #     data = json.loads(url.read().decode())
+    for group_data in data:
+        if group_data["name"] == group:
+            group_id = group_data["id"]
+            user_id = message.from_user.id
+            db_object.execute(f"UPDATE users SET group_id = {group_id} WHERE id = {user_id}")
+            db_connection.commit()
 
 @bot.message_handler(commands=['subgroup'])
 def list_subgroup(message):
-    # global subgroup
     subgroups = ["1", "2"]
     markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
     markup.add(*subgroups)
@@ -201,13 +170,12 @@ def list_subgroup(message):
 
 
 def get_subgroup(message):
-    # global subgroup
     user_id = message.from_user.id
     if message.text == "Не Устанавливать":
-        bot.send_message(message.chat.id, text="Подгруппа не установлена", reply_markup=menu_keyboard())
         subgroup = -1
         db_object.execute(f"UPDATE users SET subgroup = {subgroup} WHERE id = {user_id}")
         db_connection.commit()
+        bot.send_message(message.chat.id, text="Подгруппа не установлена", reply_markup=menu_keyboard())
     else:
         subgroup = int(message.text)
         db_object.execute(f"UPDATE users SET subgroup = {subgroup} WHERE id = {user_id}")
@@ -220,7 +188,9 @@ def get_subgroup(message):
 def about(message):
     bot.send_message(message.chat.id,
                      text='Этот будет отправлять вам сообщения об изменениях в расписании и свежие новости. '
-                          'Бот разработал Султангулов Д. Р.')
+                          'Бот разработал Султангулов Д. Р.'
+                          'Также пользовтаель может вывести расписание на сегодня, завтра или на выбранную дату'
+                          'Помимо расписания есть возможность вывести последние 3 новости')
 
 
 @bot.message_handler(content_types=['text'])
@@ -249,7 +219,7 @@ def menu(message):
     elif message.text == "Показать расписание на завтра":
         send_timetable_tomorrow(message)
     elif message.text == "Показать расписание на дату":
-        bot.send_message(message.chat.id, text='Введите дату в формате: год-месяц-день(например: 2022-04-21)',
+        bot.send_message(message.chat.id, text='Введите дату в формате: год-месяц-день(ГГГГ-ММ-ДД)(например: 2022-04-21)',
                          reply_markup=menu_keyboard())
         bot.register_next_step_handler(message, send_timetable_date)
     elif message.text == "Расписание звонков":
@@ -259,7 +229,7 @@ def menu(message):
 # https://api.ptpit.ru/timetable/groups/121/2022-04-04
 @bot.message_handler(commands=['send_timetable_today'])
 def send_timetable_today(message):
-    now = datetime.datetime.now()
+    now = datetime.datetime.now().astimezone()
     current_date = now.strftime("%Y-%m-%d")
     user_id = message.from_user.id
     db_object.execute(f"SELECT group_id FROM users WHERE id = {user_id}")
@@ -329,7 +299,7 @@ def send_timetable_today(message):
 
 @bot.message_handler(commands=['send_timetable_tomorrow'])
 def send_timetable_tomorrow(message):
-    now = datetime.datetime.now()
+    now = datetime.datetime.now().astimezone()
     tomorrow_date = now + datetime.timedelta(days=1)
     tomorrow_date = tomorrow_date.strftime("%Y-%m-%d")
 
@@ -477,16 +447,15 @@ def send_news(message):
     for index, data in enumerate(NewsUrl):
         if index == 3:
             break
-        # if data.find('span', class_='time2 time3') is not None:
         urlsNews.append(data.get('href'))
 
     print(urlsNews)
 
     for urlNews in urlsNews:
         url = urlNews
-        # print(url)
+        print(url)
         page = requests.get(url)
-        # print(page.status_code)
+        print(page.status_code)
 
         soup = BeautifulSoup(page.text, "html.parser")
 
@@ -505,6 +474,12 @@ def send_news(message):
 @bot.message_handler(content_types=['send_time_of_lessons_with_breaks'])
 def send_time_of_lessons_with_breaks(message):
     bot.send_message(message.chat.id, '\n'.join(time_of_lessons_with_breaks))
+
+
+@bot.message_handler(content_types=['send_refreshed_timetable'])
+def send_refreshed_timetable(message):
+    bot.send_message(message.chat.id, "")
+
 
 
 if __name__ == '__main__':
