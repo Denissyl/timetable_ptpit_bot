@@ -166,7 +166,8 @@ def get_group(message, data):
 
             db_object.execute(f"SELECT group_id FROM timetable")
             result = db_object.fetchall()
-            if group_id not in result:
+
+            if group_id not in result[0]:
                 print(group_id)
                 db_object.execute("INSERT INTO timetable (group_id) VALUES (%s)", [group_id])
                 db_connection.commit()
