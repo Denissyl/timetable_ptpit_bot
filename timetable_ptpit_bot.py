@@ -164,13 +164,29 @@ def get_group(message, data):
             db_object.execute(f"UPDATE users SET group_id = {group_id} WHERE id = {user_id}")
             db_connection.commit()
 
-            db_object.execute(f"SELECT group_id FROM timetable")
-            result = db_object.fetchall()
 
-            if group_id not in result[0]:
-                print(group_id)
+
+            db_object.execute("SELECT group_id FROM timetable")
+            result = [item2[0] for item2 in db_object.fetchall()]
+
+            if group_id not in result:
                 db_object.execute("INSERT INTO timetable (group_id) VALUES (%s)", [group_id])
                 db_connection.commit()
+
+
+
+            db_object.execute("SELECT group_id FROM users")
+            result2 = [item3[0] for item3 in db_object.fetchall()]
+
+            for r in result:
+                if not r in result2:
+                    db_object.execute(f"DELETE FROM timetable WHERE group_id = {r}")
+                    db_connection.commit()
+
+
+            print(group_id)
+            print(result)
+            print(result2)
 
 
 @bot.message_handler(commands=['subgroup'])
@@ -536,7 +552,16 @@ def send_time_of_lessons_with_breaks(message):
 def send_refreshed_timetable():
     db_object.execute(f"SELECT group_id FROM timetable")
     group_ids = db_object.fetchall()
+    # db_object.execute(f"SELECT group_id FROM users")
+    # result = [item[0] for item in db_object.fetchall()]
     for group_id in group_ids:
+        #
+        #
+        #
+        # if group_id not in result:
+        #     db_object.execute("INSERT INTO timetable (group_id) VALUES (%s)", [group_id])
+        #     db_connection.commit()
+
         print(group_id)
         now = datetime.datetime.now().astimezone()
         current_date = now.strftime("%Y-%m-%d")
