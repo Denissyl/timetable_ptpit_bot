@@ -164,16 +164,20 @@ def get_group(message, data):
             db_object.execute(f"UPDATE users SET group_id = {group_id} WHERE id = {user_id}")
             db_connection.commit()
 
-
-
             db_object.execute("SELECT group_id FROM timetable")
             result = [item2[0] for item2 in db_object.fetchall()]
 
             if group_id not in result:
-                db_object.execute("INSERT INTO timetable (group_id) VALUES (%s)", [group_id])
+
+                now = datetime.datetime.now().astimezone()
+                current_date = now.strftime("%Y-%m-%d")
+                print("https://api.ptpit.ru/timetable/groups/" + str(group_id) + "/" + now.strftime("%Y-%m-%d"))
+                with urllib.request.urlopen(
+                        "https://api.ptpit.ru/timetable/groups/" + str(group_id) + "/" + current_date) as url:
+                    data = json.loads(url.read().decode())
+
+                db_object.execute("INSERT INTO timetable (group_id, current_timetable) VALUES (%s, %s)", ([group_id], Json(data)))
                 db_connection.commit()
-
-
 
             db_object.execute("SELECT group_id FROM users")
             result2 = [item3[0] for item3 in db_object.fetchall()]
@@ -182,7 +186,6 @@ def get_group(message, data):
                 if not r in result2:
                     db_object.execute(f"DELETE FROM timetable WHERE group_id = {r}")
                     db_connection.commit()
-
 
             print(group_id)
             print(result)
@@ -583,64 +586,76 @@ def send_refreshed_timetable():
 
             db_object.execute(f"SELECT current_timetable FROM timetable WHERE {group_id[0]} = group_id")
             current_timetable = db_object.fetchone()[0]
-            if current_timetable:
-                dates_refreshed_timetable = []
-                temp_date = ""
-                for i in range(len([ele for ele in data if isinstance(ele, dict)])):
-                    if i < len([ele for ele in current_timetable if isinstance(ele, dict)]):
-                        # print(i)
-                        # print(len([ele for ele in data if isinstance(ele, dict)]))
-                        # print(len([ele for ele in current_timetable if isinstance(ele, dict)]))
-                        date = data[i]["date"]
-                        # print(data[i])
-                        # print(current_timetable[i])
-                        if data[i] != current_timetable[i]:
-                            if temp_date != date:
-                                dates_refreshed_timetable.append(date)
-                                temp_date = date
+            dates_refreshed_timetable = []
+            temp_date = ""
+            for i in range(len([ele for ele in data if isinstance(ele, dict)])):
+                if i < len([ele for ele in current_timetable if isinstance(ele, dict)]):
+                    # print(i)
+                    # print(len([ele for ele in data if isinstance(ele, dict)]))
+                    # print(len([ele for ele in current_timetable if isinstance(ele, dict)]))
+                    date = data[i]["date"]
+                    # print(data[i])
+                    # print(current_timetable[i])
+                    if data[i] != current_timetable[i]:
+                        if temp_date != date:
+                            dates_refreshed_timetable.append(date)
+                            temp_date = date
 
-                print(dates_refreshed_timetable)
-                # users_id = []
-                # db_object.execute(f"SELECT id FROM users")
-                # ids = db_object.fetchall()
-                # for id in ids:
-                #     users_id.append(id[0])
-                # print(users_id)
-                if dates_refreshed_timetable:
-                    db_object.execute(f"UPDATE timetable SET current_timetable = {Json(data)} WHERE group_id = {group_id[0]}")
-                    db_connection.commit()
-                for date in dates_refreshed_timetable:
-                    db_object.execute(f"SELECT id FROM users WHERE group_id = {group_id[0]}")
-                    chat_ids = db_object.fetchall()[0]
-                    print(chat_ids)
-                    for chat_id in chat_ids:
-                        db_object.execute(f"SELECT subgroup FROM users WHERE id = {chat_id}")
-                        subgroup = db_object.fetchone()[0]
+            print(dates_refreshed_timetable)
+            # users_id = []
+            # db_object.execute(f"SELECT id FROM users")
+            # ids = db_object.fetchall()
+            # for id in ids:
+            #     users_id.append(id[0])
+            # print(users_id)
+            if dates_refreshed_timetable:
+                db_object.execute(f"UPDATE timetable SET current_timetable = {Json(data)} WHERE group_id = {group_id[0]}")
+                db_connection.commit()
+            for date in dates_refreshed_timetable:
+                db_object.execute(f"SELECT id FROM users WHERE group_id = {group_id[0]}")
+                chat_ids = db_object.fetchall()[0]
+                print(chat_ids)
+                for chat_id in chat_ids:
+                    db_object.execute(f"SELECT subgroup FROM users WHERE id = {chat_id}")
+                    subgroup = db_object.fetchone()[0]
 
-                        week = day_of_week[
-                            datetime.date(int(date.split("-")[0]), int(date.split("-")[1]),
-                                          int(date.split("-")[2])).weekday()]
-                        print("Обновленное расписание на " + week + " (" + date + ")")
-                        bot.send_message(chat_id=chat_id,
-                                         text="Обновленное расписание на " + week + " (" + date + ")")
-                        for timetable in data:
-                            if timetable["date"] == date:
-                                # for user_id in range(len(users_id)):
-                                #     chat_id = users_id[user_id]
-                                #     print(chat_id)
-                                if timetable["subgroup"] == 0:
-                                    bot.send_message(chat_id=chat_id,
-                                                     text=(
-                                                         f'Номер пары: {str(timetable["num"])}''\n'
-                                                         f'Предмет: {timetable["subject_name"]}''\n'
-                                                         f'Подгруппа: Группа''\n'
-                                                         f'Время: {time_of_lessons[timetable["num"]]}''\n'
-                                                         f'Кабинет: {str(timetable["room_name"])}''\n'
-                                                         f'ФИО: {timetable["teacher_surname"]} '
-                                                         f'{timetable["teacher_name"]} '
-                                                         f'{timetable["teacher_secondname"]}'
-                                                     ))
-                                elif timetable["subgroup"] > 0 and subgroup == -1:
+                    week = day_of_week[
+                        datetime.date(int(date.split("-")[0]), int(date.split("-")[1]),
+                                      int(date.split("-")[2])).weekday()]
+                    print("Обновленное расписание на " + week + " (" + date + ")")
+                    bot.send_message(chat_id=chat_id,
+                                     text="Обновленное расписание на " + week + " (" + date + ")")
+                    for timetable in data:
+                        if timetable["date"] == date:
+                            # for user_id in range(len(users_id)):
+                            #     chat_id = users_id[user_id]
+                            #     print(chat_id)
+                            if timetable["subgroup"] == 0:
+                                bot.send_message(chat_id=chat_id,
+                                                 text=(
+                                                     f'Номер пары: {str(timetable["num"])}''\n'
+                                                     f'Предмет: {timetable["subject_name"]}''\n'
+                                                     f'Подгруппа: Группа''\n'
+                                                     f'Время: {time_of_lessons[timetable["num"]]}''\n'
+                                                     f'Кабинет: {str(timetable["room_name"])}''\n'
+                                                     f'ФИО: {timetable["teacher_surname"]} '
+                                                     f'{timetable["teacher_name"]} '
+                                                     f'{timetable["teacher_secondname"]}'
+                                                 ))
+                            elif timetable["subgroup"] > 0 and subgroup == -1:
+                                bot.send_message(chat_id=chat_id,
+                                                 text=(
+                                                     f'Номер пары: {str(timetable["num"])}''\n'
+                                                     f'Предмет: {timetable["subject_name"]}''\n'
+                                                     f'Подгруппа: {str(timetable["subgroup"])}''\n'
+                                                     f'Время: {time_of_lessons[timetable["num"]]}''\n'
+                                                     f'Кабинет: {str(timetable["room_name"])}''\n'
+                                                     f'ФИО: {timetable["teacher_surname"]} '
+                                                     f'{timetable["teacher_name"]} '
+                                                     f'{timetable["teacher_secondname"]}'
+                                                 ))
+                            elif timetable["subgroup"] > 0 and subgroup > 0:
+                                if timetable["subgroup"] == subgroup:
                                     bot.send_message(chat_id=chat_id,
                                                      text=(
                                                          f'Номер пары: {str(timetable["num"])}''\n'
@@ -652,20 +667,7 @@ def send_refreshed_timetable():
                                                          f'{timetable["teacher_name"]} '
                                                          f'{timetable["teacher_secondname"]}'
                                                      ))
-                                elif timetable["subgroup"] > 0 and subgroup > 0:
-                                    if timetable["subgroup"] == subgroup:
-                                        bot.send_message(chat_id=chat_id,
-                                                         text=(
-                                                             f'Номер пары: {str(timetable["num"])}''\n'
-                                                             f'Предмет: {timetable["subject_name"]}''\n'
-                                                             f'Подгруппа: {str(timetable["subgroup"])}''\n'
-                                                             f'Время: {time_of_lessons[timetable["num"]]}''\n'
-                                                             f'Кабинет: {str(timetable["room_name"])}''\n'
-                                                             f'ФИО: {timetable["teacher_surname"]} '
-                                                             f'{timetable["teacher_name"]} '
-                                                             f'{timetable["teacher_secondname"]}'
-                                                         ))
-                dates_refreshed_timetable.clear()
+            dates_refreshed_timetable.clear()
 
 
 def schedule_checker():
