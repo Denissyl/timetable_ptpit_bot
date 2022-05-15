@@ -335,23 +335,28 @@ def send_timetable_today(message):
                                                          f'{timetable["teacher_name"]} '
                                                          f'{timetable["teacher_secondname"]}'
                                                      ))
+                    sleep(3.5)
             else:
                 bot.send_message(message.chat.id,
                                  text="Расписание на " + week + " (" + current_date + ") отсутствует")
-
+                sleep(3.5)
 @bot.message_handler(commands=['send_timetable_tomorrow'])
 def send_timetable_tomorrow(message):
     now = datetime.datetime.now().astimezone()
     tomorrow_date = now + datetime.timedelta(days=1)
     tomorrow_date = tomorrow_date.strftime("%Y-%m-%d")
-
+    # message = message[message.find("{") + 1:]
+    print(message)
     user_id = message.from_user.id
     db_object.execute(f"SELECT group_id FROM users WHERE id = {user_id}")
+    print("message", message)
+    print("user id =", user_id)
     group_id = db_object.fetchone()[0]
+
     db_object.execute(f"SELECT subgroup FROM users WHERE id = {user_id}")
     subgroup = db_object.fetchone()[0]
-    print(group_id)
-    print(subgroup)
+    # print(group_id)
+    # print(subgroup)
     if not group_id:
         bot.send_message(message.chat.id,
                          text='Выберите группу')
@@ -409,10 +414,11 @@ def send_timetable_tomorrow(message):
                                                          f'{timetable["teacher_name"]} '
                                                          f'{timetable["teacher_secondname"]}'
                                                      ))
+                    sleep(3.5)
             else:
                 bot.send_message(message.chat.id,
                                  text="Расписание на " + week + " (" + tomorrow_date + ") отсутствует")
-
+                sleep(3.5)
 @bot.message_handler(commands=['send_timetable_date'])
 def send_timetable_date(message):
     date = message.text
@@ -484,10 +490,11 @@ def send_timetable_date(message):
                                                          f'{timetable["teacher_name"]} '
                                                          f'{timetable["teacher_secondname"]}'
                                                      ))
+                    sleep(3.5)
             else:
                 bot.send_message(message.chat.id,
                                  text="Расписание на " + week + " (" + date + ") отсутствует")
-
+                sleep(3.5)
 @bot.message_handler(content_types=['send_news'])
 def send_news(message):
     url = 'https://ptpit.ru/?cat=16'
@@ -531,6 +538,10 @@ def send_news(message):
 @bot.message_handler(content_types=['send_time_of_lessons_with_breaks'])
 def send_time_of_lessons_with_breaks(message):
     bot.send_message(message.chat.id, '\n'.join(time_of_lessons_with_breaks))
+    db_object.execute(f"SELECT group_id FROM timetable")
+    group_ids = db_object.fetchall()
+    # db_object.execute(f"SELECT group_id FROM users")
+    # result = [item[0] for item in db_object.fetchall()]
 
 
 # def write_current_timetable():
@@ -574,7 +585,7 @@ def send_refreshed_timetable():
             current_timetable = db_object.fetchone()[0]
             if current_timetable:
                 dates_refreshed_timetable = []
-
+                temp_date = ""
                 for i in range(len([ele for ele in data if isinstance(ele, dict)])):
                     if i < len([ele for ele in current_timetable if isinstance(ele, dict)]):
                         # print(i)
@@ -584,9 +595,9 @@ def send_refreshed_timetable():
                         # print(data[i])
                         # print(current_timetable[i])
                         if data[i] != current_timetable[i]:
-                            dates_refreshed_timetable.append(date)
-
-
+                            if temp_date != date:
+                                dates_refreshed_timetable.append(date)
+                                temp_date = date
 
                 print(dates_refreshed_timetable)
                 # users_id = []
