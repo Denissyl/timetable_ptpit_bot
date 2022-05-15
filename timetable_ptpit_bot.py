@@ -176,7 +176,7 @@ def get_group(message, data):
                         "https://api.ptpit.ru/timetable/groups/" + str(group_id) + "/" + current_date) as url:
                     data = json.loads(url.read().decode())
 
-                db_object.execute("INSERT INTO timetable (group_id, current_timetable) VALUES (%s, %s)", ([group_id], Json(data)))
+                db_object.execute("INSERT INTO timetable (group_id, current_timetable) VALUES (%s, %s)", (group_id, Json(data)))
                 db_connection.commit()
 
             db_object.execute("SELECT group_id FROM users")
