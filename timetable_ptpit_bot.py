@@ -655,8 +655,6 @@ def send_refreshed_timetable():
                                                              f'{timetable["teacher_secondname"]}'
                                                          ))
                 dates_refreshed_timetable.clear()
-            db_object.execute(f"UPDATE timetable SET current_timetable = {Json(data)} WHERE group_id = {group_id[0]}")
-            db_connection.commit()
 
 
 def schedule_checker():
