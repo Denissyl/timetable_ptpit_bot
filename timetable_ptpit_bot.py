@@ -600,7 +600,7 @@ def send_refreshed_timetable():
                         if temp_date != date:
                             dates_refreshed_timetable.append(date)
                             temp_date = date
-
+            temp_date = ""
             print(dates_refreshed_timetable)
             # users_id = []
             # db_object.execute(f"SELECT id FROM users")
