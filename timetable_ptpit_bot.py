@@ -132,24 +132,26 @@ def start(message):
 @bot.message_handler(commands=['about'])
 def about(message):
     bot.send_message(message.chat.id,
-                     text='Этот будет отправлять вам сообщения об изменениях в расписании. '
-                          'Проверка нового расписания происходит каждые 10 минут.'
-                          'Бот разработал Султангулов Д. Р. '
+                     text='Этот будет отправлять вам сообщения об изменениях в расписании.\n'
+                          'Проверка нового расписания происходит каждые 10 минут.\n'
+                          'Бот разработал Султангулов Д. Р.\n'
                           'Также пользователь может вывести расписание на сегодня, '
-                          'завтра или на выбранную дату в формате(гггг-мм-дд). '
-                          'Кроме того бот может вывести расписание звонков с перерывами.'
+                          'завтра или на выбранную дату в формате(ГГГГ-ММ-ДД).\n'
+                          'Кроме того бот может вывести расписание звонков с перерывами.\n'
                           'Помимо расписания есть возможность вывести последние 3 новости с сайта ПТПИТ.')
 
 
 @bot.message_handler(commands=['help'])
 def help(message):
     bot.send_message(message.chat.id,
-                     text='Введите /group для выбора группы, /subgroup для выбора подгруппы'
-                          '/send_timetable_today выводит расписание на сегодня'
-                          '/send_timetable_tomorrow выводит расписание на завтра'
-                          '/send_timetable_date выводит расписание на определенную дату(формат ввода: гггг-мм-дд)'
-                          '/send_news выводит три последние новости с сайта ПТПИТ'
-                          '/send_time_of_lessons_with_breaks выводит расписание звонков с перерывами')
+                     text='Введите /group для выбора группы, /subgroup для выбора подгруппы.\n'
+                          '/send_timetable_today выводит расписание на сегодня.\n'
+                          '/send_timetable_tomorrow выводит расписание на завтра.\n'
+                          '/send_timetable_date выводит расписание на определенную дату(формат ввода: ГГГГ-ММ-ДД).\n'
+                          '/send_news выводит три последние новости с сайта ПТПИТ.\n'
+                          '/send_time_of_lessons_with_breaks выводит расписание звонков с перерывами.\n'
+                          '/about выводит информацию о боте.\n'
+                          '/help выводит инструкцию по использованию бота.')
 
 
 @bot.message_handler(commands=['group'])
@@ -230,39 +232,6 @@ def get_subgroup(message):
         db_connection.commit()
         bot.send_message(message.chat.id, text="Выбрана подгруппа: " + message.text,
                          reply_markup=menu_keyboard())
-
-
-@bot.message_handler(content_types=['text'])
-def menu(message):
-    if message.text == "Выбрать группу":
-        list_group(message)
-    elif message.text == "Выбрать подгруппу":
-        list_subgroup(message)
-    elif message.text == "О боте":
-        about(message)
-    elif message.text == "Помощь":
-        help(message)
-    # elif message.text == "Включить отображение новостей":
-    #     news_status = True
-    #     bot.send_message(message.chat.id, text="Включено отображение новостей",
-    #                      reply_markup=menu_keyboard())
-    # elif message.text == "Выключить отображение новостей":
-    #     news_status = False
-    #     bot.send_message(message.chat.id, text="Выключено отображение новостей",
-    #                      reply_markup=menu_keyboard())
-    elif message.text == "Отобразить последние 3 новости":
-        send_news(message)
-    elif message.text == "Показать расписание на сегодня":
-        send_timetable_today(message)
-    elif message.text == "Показать расписание на завтра":
-        send_timetable_tomorrow(message)
-    elif message.text == "Показать расписание на дату":
-        bot.send_message(message.chat.id,
-                         text='Введите дату в формате: год-месяц-день(ГГГГ-ММ-ДД)(например: 2022-04-21)',
-                         reply_markup=menu_keyboard())
-        bot.register_next_step_handler(message, send_timetable_date)
-    elif message.text == "Расписание звонков":
-        send_time_of_lessons_with_breaks(message)
 
 
 # https://api.ptpit.ru/timetable/groups/121/2022-04-04
@@ -849,6 +818,42 @@ def schedule_checker():
     while True:
         schedule.run_pending()
         sleep(1)
+
+
+@bot.message_handler(content_types=['text'])
+def menu(message):
+    if message.text == "Выбрать группу":
+        list_group(message)
+    elif message.text == "Выбрать подгруппу":
+        list_subgroup(message)
+    elif message.text == "О боте":
+        about(message)
+    elif message.text == "Помощь":
+        help(message)
+    # elif message.text == "Включить отображение новостей":
+    #     news_status = True
+    #     bot.send_message(message.chat.id, text="Включено отображение новостей",
+    #                      reply_markup=menu_keyboard())
+    # elif message.text == "Выключить отображение новостей":
+    #     news_status = False
+    #     bot.send_message(message.chat.id, text="Выключено отображение новостей",
+    #                      reply_markup=menu_keyboard())
+    elif message.text == "Отобразить последние 3 новости":
+        send_news(message)
+    elif message.text == "Показать расписание на сегодня":
+        send_timetable_today(message)
+    elif message.text == "Показать расписание на завтра":
+        send_timetable_tomorrow(message)
+    elif message.text == "Показать расписание на дату":
+        bot.send_message(message.chat.id,
+                         text='Введите дату в формате: год-месяц-день(ГГГГ-ММ-ДД)(например: 2022-04-21)',
+                         reply_markup=menu_keyboard())
+        bot.register_next_step_handler(message, send_timetable_date)
+    elif message.text == "Расписание звонков":
+        send_time_of_lessons_with_breaks(message)
+    else:
+        bot.send_message(message.chat.id,
+                         text='Такой команды не существует')
 
 
 if __name__ == '__main__':
