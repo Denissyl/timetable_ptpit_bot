@@ -24,8 +24,6 @@ DB_URI = "postgres://elbthyzcnbsebw:1f94045c08512cf2aa72f7cdcdf3dc123f5e2689b027
 db_connection = psycopg2.connect(DB_URI, sslmode="require")
 db_object = db_connection.cursor()
 
-# news_status = False
-
 time_of_lessons = {1: "8:30 - 10:05",
                    2: "10:25 - 12:00",
                    3: "12:20 - 14:10",
@@ -127,14 +125,31 @@ def start(message):
         db_object.execute("INSERT INTO users(id, username, subgroup) VALUES (%s, %s, %s)", (user_id, username, -1))
         db_connection.commit()
     bot.send_message(message.chat.id,
-                     text="Привет, {0.first_name}! для начала работы выберите свою группу и подгруппу".format(
+                     text="Привет, {0.first_name}! для начала работы выберите свою группу и подгруппу.".format(
                          message.from_user), reply_markup=menu_keyboard())
+
+
+@bot.message_handler(commands=['about'])
+def about(message):
+    bot.send_message(message.chat.id,
+                     text='Этот будет отправлять вам сообщения об изменениях в расписании. '
+                          'Проверка нового расписания происходит каждые 10 минут.'
+                          'Бот разработал Султангулов Д. Р. '
+                          'Также пользователь может вывести расписание на сегодня, '
+                          'завтра или на выбранную дату в формате(гггг-мм-дд). '
+                          'Кроме того бот может вывести расписание звонков с перерывами.'
+                          'Помимо расписания есть возможность вывести последние 3 новости с сайта ПТПИТ.')
 
 
 @bot.message_handler(commands=['help'])
 def help(message):
     bot.send_message(message.chat.id,
-                     text='Для выбора группы вы можете ввести /group и название своей группы или нажав на кнопку. Для выбора подгруппы вы можете ввести /subgroup и название своей группы или нажав на кнопку.')
+                     text='Введите /group для выбора группы, /subgroup для выбора подгруппы'
+                          '/send_timetable_today выводит расписание на сегодня'
+                          '/send_timetable_tomorrow выводит расписание на завтра'
+                          '/send_timetable_date выводит расписание на определенную дату(формат ввода: гггг-мм-дд)'
+                          '/send_news выводит три последние новости с сайта ПТПИТ'
+                          '/send_time_of_lessons_with_breaks выводит расписание звонков с перерывами')
 
 
 @bot.message_handler(commands=['group'])
@@ -155,8 +170,6 @@ def get_group(message, data):
     bot.send_message(message.chat.id, text="Выбрана группа: " + message.text,
                      reply_markup=menu_keyboard())
     group = message.text
-    # with urllib.request.urlopen("https://api.ptpit.ru/groups") as url:
-    #     data = json.loads(url.read().decode())
     for group_data in data:
         if group_data["name"] == group:
             group_id = group_data["id"]
@@ -168,7 +181,6 @@ def get_group(message, data):
             result = [item2[0] for item2 in db_object.fetchall()]
 
             if group_id not in result:
-
                 now = datetime.datetime.now().astimezone()
                 current_date = now.strftime("%Y-%m-%d")
                 print("https://api.ptpit.ru/timetable/groups/" + str(group_id) + "/" + now.strftime("%Y-%m-%d"))
@@ -176,7 +188,8 @@ def get_group(message, data):
                         "https://api.ptpit.ru/timetable/groups/" + str(group_id) + "/" + current_date) as url:
                     data = json.loads(url.read().decode())
 
-                db_object.execute("INSERT INTO timetable (group_id, current_timetable) VALUES (%s, %s)", (group_id, Json(data)))
+                db_object.execute("INSERT INTO timetable (group_id, current_timetable) VALUES (%s, %s)",
+                                  (group_id, Json(data)))
                 db_connection.commit()
 
             db_object.execute("SELECT group_id FROM users")
@@ -219,18 +232,8 @@ def get_subgroup(message):
                          reply_markup=menu_keyboard())
 
 
-@bot.message_handler(commands=['about'])
-def about(message):
-    bot.send_message(message.chat.id,
-                     text='Этот будет отправлять вам сообщения об изменениях в расписании и свежие новости. '
-                          'Бот разработал Султангулов Д. Р. '
-                          'Также пользовтаель может вывести расписание на сегодня, завтра или на выбранную дату. '
-                          'Помимо расписания есть возможность вывести последние 3 новости.')
-
-
 @bot.message_handler(content_types=['text'])
 def menu(message):
-    global news_status
     if message.text == "Выбрать группу":
         list_group(message)
     elif message.text == "Выбрать подгруппу":
@@ -389,23 +392,18 @@ def send_timetable_today(message):
                 bot.send_message(message.chat.id,
                                  text="Расписание на " + week + " (" + current_date + ") отсутствует")
                 sleep(3.5)
+
+
 @bot.message_handler(commands=['send_timetable_tomorrow'])
 def send_timetable_tomorrow(message):
     now = datetime.datetime.now().astimezone()
     tomorrow_date = now + datetime.timedelta(days=1)
     tomorrow_date = tomorrow_date.strftime("%Y-%m-%d")
-    # message = message[message.find("{") + 1:]
-    print(message)
     user_id = message.from_user.id
     db_object.execute(f"SELECT group_id FROM users WHERE id = {user_id}")
-    print("message", message)
-    print("user id =", user_id)
     group_id = db_object.fetchone()[0]
-
     db_object.execute(f"SELECT subgroup FROM users WHERE id = {user_id}")
     subgroup = db_object.fetchone()[0]
-    # print(group_id)
-    # print(subgroup)
     if not group_id:
         bot.send_message(message.chat.id,
                          text='Выберите группу')
@@ -514,6 +512,8 @@ def send_timetable_tomorrow(message):
                 bot.send_message(message.chat.id,
                                  text="Расписание на " + week + " (" + tomorrow_date + ") отсутствует")
                 sleep(3.5)
+
+
 @bot.message_handler(commands=['send_timetable_date'])
 def send_timetable_date(message):
     date = message.text
@@ -546,8 +546,6 @@ def send_timetable_date(message):
                     for timetable in data:
                         if timetable["date"] == date:
                             if timetable["subgroup"] == 0:
-                                print(str(timetable["num"]))
-                                print(timetable["num"])
                                 if timetable["moodle"]:
                                     bot.send_message(message.chat.id,
                                                      text=(
@@ -635,28 +633,30 @@ def send_timetable_date(message):
                 bot.send_message(message.chat.id,
                                  text="Расписание на " + week + " (" + date + ") отсутствует")
                 sleep(3.5)
+
+
 @bot.message_handler(content_types=['send_news'])
 def send_news(message):
     url = 'https://ptpit.ru/?cat=16'
     page = requests.get(url)
     print(page.status_code)
 
-    urlsNews = []
-    allNews = []
-    titlesNews = []
-    datesNews = []
+    urls_news = []
+    all_news = []
+    titles_news = []
+    dates_news = []
 
     soup = BeautifulSoup(page.text, "html.parser")
 
-    NewsUrl = soup.findAll('a', class_='read-more')
-    for index, data in enumerate(NewsUrl):
+    news_url = soup.findAll('a', class_='read-more')
+    for index, data in enumerate(news_url):
         if index == 3:
             break
-        urlsNews.append(data.get('href'))
+        urls_news.append(data.get('href'))
 
-    print(urlsNews)
+    print(urls_news)
 
-    for urlNews in urlsNews:
+    for urlNews in urls_news:
         url = urlNews
         print(url)
         page = requests.get(url)
@@ -664,20 +664,21 @@ def send_news(message):
 
         soup = BeautifulSoup(page.text, "html.parser")
 
-        Titles = soup.findAll('h2', class_='post-title')
-        for data in Titles:
-            titlesNews.append(data.text.strip())
+        titles = soup.findAll('h2', class_='post-title')
+        for data in titles:
+            titles_news.append(data.text.strip())
 
-        News = soup.findAll('div', class_='entry')
-        for data in News:
-            allNews.append(data.text.strip())
+        news = soup.findAll('div', class_='entry')
+        for data in news:
+            all_news.append(data.text.strip())
 
-        Dates = soup.findAll('a', class_='meta-date')
-        for data in Dates:
-            datesNews.append(data.text.strip())
+        dates = soup.findAll('a', href=url)
+        for data in dates:
+            dates_news.append(data.text.strip())
 
     for i in range(3):
-        bot.send_message(message.chat.id, text=titlesNews[i] + '\n' + datesNews[i] + allNews[i])
+        bot.send_message(message.chat.id, text=titles_news[i] + '\n' + "-------------------" +
+                                            '\n' + dates_news[i] + '\n' + "-------------------" + '\n' + all_news[i])
 
 
 @bot.message_handler(content_types=['send_time_of_lessons_with_breaks'])
@@ -688,16 +689,7 @@ def send_time_of_lessons_with_breaks(message):
 def send_refreshed_timetable():
     db_object.execute(f"SELECT group_id FROM timetable")
     group_ids = db_object.fetchall()
-    # db_object.execute(f"SELECT group_id FROM users")
-    # result = [item[0] for item in db_object.fetchall()]
     for group_id in group_ids:
-        #
-        #
-        #
-        # if group_id not in result:
-        #     db_object.execute("INSERT INTO timetable (group_id) VALUES (%s)", [group_id])
-        #     db_connection.commit()
-
         print(group_id)
         now = datetime.datetime.now().astimezone()
         current_date = now.strftime("%Y-%m-%d")
@@ -725,11 +717,8 @@ def send_refreshed_timetable():
                     current_timetable_date = datetime.datetime(int(current_timetable[j]["date"].split("-")[0]),
                                                                int(current_timetable[j]["date"].split("-")[1]),
                                                                int(current_timetable[j]["date"].split("-")[2]))
-
                     print(ifdate)
                     print(current_timetable_date)
-                    # print(ifdate > current_timetable_date)
-
                     if data[i] != current_timetable[j]:
 
                         if ifdate > current_timetable_date:
@@ -746,21 +735,13 @@ def send_refreshed_timetable():
                             print(date)
                             dates_refreshed_timetable.append(date)
                             temp_date = date
-                        # db_object.execute(
-                        #     f"UPDATE timetable SET current_timetable = {Json(data)} WHERE group_id = {group_id[0]}")
-                        # db_connection.commit()
                 j += 1
                 i += 1
             print(dates_refreshed_timetable)
 
-            # users_id = []
-            # db_object.execute(f"SELECT id FROM users")
-            # ids = db_object.fetchall()
-            # for id in ids:
-            #     users_id.append(id[0])
-            # print(users_id)
             if dates_refreshed_timetable:
-                db_object.execute(f"UPDATE timetable SET current_timetable = {Json(data)} WHERE group_id = {group_id[0]}")
+                db_object.execute(
+                    f"UPDATE timetable SET current_timetable = {Json(data)} WHERE group_id = {group_id[0]}")
                 db_connection.commit()
             for date in dates_refreshed_timetable:
                 db_object.execute(f"SELECT id FROM users WHERE group_id = {group_id[0]}")
@@ -778,9 +759,6 @@ def send_refreshed_timetable():
                                      text="Обновленное расписание на " + week + " (" + date + ")")
                     for timetable in data:
                         if timetable["date"] == date:
-                            # for user_id in range(len(users_id)):
-                            #     chat_id = users_id[user_id]
-                            #     print(chat_id)
                             if timetable["subgroup"] == 0:
                                 if timetable["moodle"]:
                                     bot.send_message(chat_id=chat_id,
