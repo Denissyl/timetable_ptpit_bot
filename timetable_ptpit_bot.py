@@ -644,6 +644,7 @@ def send_news(message):
     urlsNews = []
     allNews = []
     titlesNews = []
+    datesNews = []
 
     soup = BeautifulSoup(page.text, "html.parser")
 
@@ -671,8 +672,12 @@ def send_news(message):
         for data in News:
             allNews.append(data.text.strip())
 
+        Dates = soup.findAll('a', class_='meta-date')
+        for data in Dates:
+            datesNews.append(data.text.strip())
+
     for i in range(3):
-        bot.send_message(message.chat.id, text=titlesNews[i] + '\n' + '\n' + allNews[i])
+        bot.send_message(message.chat.id, text=titlesNews[i] + '\n' + datesNews[i] + allNews[i])
 
 
 @bot.message_handler(content_types=['send_time_of_lessons_with_breaks'])
