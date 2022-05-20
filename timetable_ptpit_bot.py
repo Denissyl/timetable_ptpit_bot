@@ -134,11 +134,11 @@ def about(message):
     bot.send_message(message.chat.id,
                      text='Этот будет отправлять вам сообщения об изменениях в расписании.\n'
                           'Проверка нового расписания происходит каждые 10 минут.\n'
-                          'Бот разработал Султангулов Д. Р.\n'
                           'Также пользователь может вывести расписание на сегодня, '
                           'завтра или на выбранную дату в формате(ГГГГ-ММ-ДД).\n'
                           'Кроме того бот может вывести расписание звонков с перерывами.\n'
-                          'Помимо расписания есть возможность вывести последние 3 новости с сайта ПТПИТ.')
+                          'Помимо расписания есть возможность вывести последние 3 новости с сайта ПТПИТ.\n'
+                          'Бот разработал Султангулов Д. Р.')
 
 
 @bot.message_handler(commands=['help'])
@@ -647,7 +647,7 @@ def send_news(message):
 
     for i in range(3):
         bot.send_message(message.chat.id, text=titles_news[i] + '\n' + "-------------------" +
-                                            '\n' + dates_news[i] + '\n' + "-------------------" + '\n' + all_news[i])
+                                               '\n' + dates_news[i] + '\n' + "-------------------" + '\n' + all_news[i])
 
 
 @bot.message_handler(content_types=['send_time_of_lessons_with_breaks'])
@@ -689,21 +689,21 @@ def send_refreshed_timetable():
                     print(ifdate)
                     print(current_timetable_date)
                     if data[i] != current_timetable[j]:
-
-                        if ifdate > current_timetable_date:
-                            print(ifdate > current_timetable_date)
-                            j += 1
-                            print(j)
-                            continue
-                        elif ifdate < current_timetable_date:
-                            print(ifdate < current_timetable_date)
-                            i += 1
-                            print(i)
-                            continue
                         if temp_date != date:
                             print(date)
                             dates_refreshed_timetable.append(date)
                             temp_date = date
+                    if ifdate > current_timetable_date:
+                        print(ifdate > current_timetable_date)
+                        j += 1
+                        print(j)
+                        continue
+                    elif ifdate < current_timetable_date:
+                        print(ifdate < current_timetable_date)
+                        i += 1
+                        print(i)
+                        continue
+
                 j += 1
                 i += 1
             print(dates_refreshed_timetable)
