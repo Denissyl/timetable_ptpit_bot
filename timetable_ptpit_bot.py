@@ -673,39 +673,55 @@ def send_refreshed_timetable():
             temp_date = ""
             j = 0
             i = 0
+
             while i < len([element for element in data if isinstance(element, dict)]):
-                if i < len([element for element in current_timetable if isinstance(element, dict)]):
+                if i < len([element for element in data if isinstance(element, dict)]):
                     print(i)
                     print(j)
                     date = data[i]["date"]
                     ifdate = datetime.datetime(int(data[i]["date"].split("-")[0]),
                                                int(data[i]["date"].split("-")[1]),
                                                int(data[i]["date"].split("-")[2]))
-                    print(data[i])
-                    print(current_timetable[i])
-                    current_timetable_date = datetime.datetime(int(current_timetable[j]["date"].split("-")[0]),
-                                                               int(current_timetable[j]["date"].split("-")[1]),
-                                                               int(current_timetable[j]["date"].split("-")[2]))
-                    print(ifdate)
-                    print(current_timetable_date)
-                    if data[i] != current_timetable[j]:
+
+                    if len([element for element in current_timetable if isinstance(element, dict)]) > j:
+                        current_timetable_date = datetime.datetime(int(current_timetable[j]["date"].split("-")[0]),
+                                                                   int(current_timetable[j]["date"].split("-")[1]),
+                                                                   int(current_timetable[j]["date"].split("-")[2]))
+                        print(ifdate)
+                        print(current_timetable_date)
+                        print(data[i])
+                        print(current_timetable[j])
+                        if ifdate > current_timetable_date:
+                            if temp_date != date:
+                                dates_refreshed_timetable.append(date)
+                                temp_date = date
+                                i += 1
+                                continue
+                        if data[i] != current_timetable[j]:
+                            if temp_date != date:
+                                dates_refreshed_timetable.append(date)
+                                temp_date = date
+                                j += 1
+                                i += 1
+                                date_plus_one_data = datetime.date(int(date.split("-")[0]), int(date.split("-")[1]), int(date.split("-")[2]))
+                                date_plus_one_data = date_plus_one_data + datetime.timedelta(days=1)
+                                while data[i]["date"] != str(date_plus_one_data):
+                                    i += 1
+                                while current_timetable[j]["date"] != str(date_plus_one_data):
+                                    j += 1
+                                continue
+                        elif ifdate < current_timetable_date:
+                            i += 1
+                            continue
+                    else:
                         if temp_date != date:
-                            print(date)
                             dates_refreshed_timetable.append(date)
                             temp_date = date
-                    if ifdate > current_timetable_date:
-                        print(ifdate > current_timetable_date)
-                        j += 1
-                        print(j)
-                        continue
-                    elif ifdate < current_timetable_date:
-                        print(ifdate < current_timetable_date)
-                        i += 1
-                        print(i)
-                        continue
-
+                            i += 1
+                            continue
                 j += 1
                 i += 1
+
             print(dates_refreshed_timetable)
 
             if dates_refreshed_timetable:
