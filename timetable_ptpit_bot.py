@@ -532,6 +532,12 @@ def send_refreshed_timetable():
                         print(current_timetable_date)
                         print(data[i])
                         print(current_timetable[j])
+                        current_date2 = datetime.datetime(int(current_date.split("-")[0]),
+                                                         int(current_date.split("-")[1]),
+                                                         int(current_date.split("-")[2]))
+                        if ifdate > current_timetable_date and current_date2 > current_timetable_date:
+                            j += 1
+                            continue
                         if ifdate > current_timetable_date:
                             if temp_date != date:
                                 dates_refreshed_timetable.append(date)
@@ -632,6 +638,6 @@ def menu(message):
 
 
 if __name__ == '__main__':
-    schedule.every(10).minutes.do(send_refreshed_timetable)
+    schedule.every(10).seconds.do(send_refreshed_timetable)
     Thread(target=schedule_checker).start()
     bot.polling()
