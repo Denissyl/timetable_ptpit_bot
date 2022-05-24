@@ -119,26 +119,32 @@ def start(message):
     user_id = message.from_user.id
     username = message.from_user.username
     db_object.execute(f"SELECT id FROM users WHERE id = {user_id}")
-    result = db_object.fetchone()
-
-    if not result:
+    print(db_object.statusmessage)
+    print(db_object.description)
+    # try:
+    if db_object.statusmessage == "SELECT 0":
         db_object.execute("INSERT INTO users(id, username, subgroup) VALUES (%s, %s, %s)", (user_id, username, -1))
         db_connection.commit()
     bot.send_message(message.chat.id,
                      text="Привет, {0.first_name}! для начала работы выберите свою группу и подгруппу.".format(
                          message.from_user), reply_markup=menu_keyboard())
+    # sleep(1)
+    # except psycopg2.ProgrammingError as e:
+    #     if 'no results to fetch in e':
+    #         pass
 
 
 @bot.message_handler(commands=['about'])
 def about(message):
     bot.send_message(message.chat.id,
-                     text='Этот будет отправлять вам сообщения об изменениях в расписании.\n'
+                     text='Этот бот будет отправлять вам сообщения об изменениях в расписании.\n'
                           'Проверка нового расписания происходит каждые 10 минут.\n'
                           'Также пользователь может вывести расписание на сегодня, '
                           'завтра или на выбранную дату в формате(ГГГГ-ММ-ДД).\n'
                           'Кроме того бот может вывести расписание звонков с перерывами.\n'
                           'Помимо расписания есть возможность вывести последние 3 новости с сайта ПТПИТ.\n'
-                          'Бот разработал Султангулов Д. Р.')
+                          'Бот разработал Султангулов Д.\n'
+                          'При возникновении ошибок связанных с работой бота, свяжитесь с @Denissyl')
 
 
 @bot.message_handler(commands=['help'])
