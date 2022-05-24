@@ -492,91 +492,38 @@ def send_timetable_tomorrow(message):
 @bot.message_handler(commands=['send_timetable_date'])
 def send_timetable_date(message):
     date = message.text
+    try:
+        datetime.datetime.strptime(date, '%Y-%m-%d')
 
-    user_id = message.from_user.id
-    db_object.execute(f"SELECT group_id FROM users WHERE id = {user_id}")
-    group_id = db_object.fetchone()[0]
-    db_object.execute(f"SELECT subgroup FROM users WHERE id = {user_id}")
-    subgroup = db_object.fetchone()[0]
-    if not group_id:
-        bot.send_message(message.chat.id,
-                         text='Выберите группу')
-    else:
-        print(date)
-        print(date.split("-")[0])
-        print("https://api.ptpit.ru/timetable/groups/" + str(group_id) + "/" + date)
-        with urllib.request.urlopen("https://api.ptpit.ru/timetable/groups/" + str(group_id) + "/" + date) as url:
-            data = json.loads(url.read().decode())
-            week = day_of_week[
-                datetime.date(int(date.split("-")[0]), int(date.split("-")[1]), int(date.split("-")[2])).weekday()]
-            print(data)
-            print("Расписание на " + week + " (" + date + ")")
-            if len(data):
-                if data[0]["date"] != date:
-                    bot.send_message(message.chat.id,
-                                     text="Расписание на " + week + " (" + date + ") отсутствует")
-                else:
-                    bot.send_message(message.chat.id,
-                                     text="Расписание на " + week + " (" + date + ")")
-                    for timetable in data:
-                        if timetable["date"] == date:
-                            if timetable["subgroup"] == 0:
-                                if timetable["moodle"]:
-                                    bot.send_message(message.chat.id,
-                                                     text=(
-                                                         f'Номер пары: {str(timetable["num"])}''\n'
-                                                         f'Предмет: {timetable["subject_name"]}''\n'
-                                                         f'Подгруппа: Группа''\n'
-                                                         f'Время: {time_of_lessons[timetable["num"]]}''\n'
-                                                         f'Кабинет: {str(timetable["room_name"])}''\n'
-                                                         f'Задача: {str(timetable["moodle"][0]["url"])}''\n'
-                                                         f'Ресурс: {str(timetable["moodle"][1]["url"])}''\n'
-                                                         f'ФИО: {timetable["teacher_surname"]} '
-                                                         f'{timetable["teacher_name"]} '
-                                                         f'{timetable["teacher_secondname"]}'
-                                                     ))
-                                else:
-                                    bot.send_message(message.chat.id,
-                                                     text=(
-                                                         f'Номер пары: {str(timetable["num"])}''\n'
-                                                         f'Предмет: {timetable["subject_name"]}''\n'
-                                                         f'Подгруппа: Группа''\n'
-                                                         f'Время: {time_of_lessons[timetable["num"]]}''\n'
-                                                         f'Кабинет: {str(timetable["room_name"])}''\n'
-                                                         f'ФИО: {timetable["teacher_surname"]} '
-                                                         f'{timetable["teacher_name"]} '
-                                                         f'{timetable["teacher_secondname"]}'
-                                                     ))
-                            elif timetable["subgroup"] > 0 and subgroup == -1:
-                                if timetable["moodle"]:
-                                    bot.send_message(message.chat.id,
-                                                     text=(
-                                                         f'Номер пары: {str(timetable["num"])}''\n'
-                                                         f'Предмет: {timetable["subject_name"]}''\n'
-                                                         f'Подгруппа: Группа''\n'
-                                                         f'Время: {time_of_lessons[timetable["num"]]}''\n'
-                                                         f'Кабинет: {str(timetable["room_name"])}''\n'
-                                                         f'Задача: {json.loads(timetable["moodle"])[0]["url"]}''\n'
-                                                         f'Ресурс: {json.loads(timetable["moodle"])[1]["url"]}''\n'
-                                                         f'ФИО: {timetable["teacher_surname"]} '
-                                                         f'{timetable["teacher_name"]} '
-                                                         f'{timetable["teacher_secondname"]}'
-                                                     ))
-                                else:
-                                    bot.send_message(message.chat.id,
-                                                     text=(
-                                                         f'Номер пары: {str(timetable["num"])}''\n'
-                                                         f'Предмет: {timetable["subject_name"]}''\n'
-                                                         f'Подгруппа: {str(timetable["subgroup"])}''\n'
-                                                         f'Время: {time_of_lessons[timetable["num"]]}''\n'
-                                                         f'Кабинет: {str(timetable["room_name"])}''\n'
-                                                         f'ФИО: {timetable["teacher_surname"]} '
-                                                         f'{timetable["teacher_name"]} '
-                                                         f'{timetable["teacher_secondname"]}'
-                                                     ))
+        user_id = message.from_user.id
+        db_object.execute(f"SELECT group_id FROM users WHERE id = {user_id}")
 
-                            elif timetable["subgroup"] > 0 and subgroup > 0:
-                                if timetable["subgroup"] == subgroup:
+        group_id = db_object.fetchone()[0]
+        db_object.execute(f"SELECT subgroup FROM users WHERE id = {user_id}")
+        subgroup = db_object.fetchone()[0]
+        if not group_id:
+            bot.send_message(message.chat.id,
+                             text='Выберите группу')
+        else:
+            print(date)
+            print(date.split("-")[0])
+            print("https://api.ptpit.ru/timetable/groups/" + str(group_id) + "/" + date)
+            with urllib.request.urlopen("https://api.ptpit.ru/timetable/groups/" + str(group_id) + "/" + date) as url:
+                data = json.loads(url.read().decode())
+                week = day_of_week[
+                    datetime.date(int(date.split("-")[0]), int(date.split("-")[1]), int(date.split("-")[2])).weekday()]
+                print(data)
+                print("Расписание на " + week + " (" + date + ")")
+                if len(data):
+                    if data[0]["date"] != date:
+                        bot.send_message(message.chat.id,
+                                         text="Расписание на " + week + " (" + date + ") отсутствует")
+                    else:
+                        bot.send_message(message.chat.id,
+                                         text="Расписание на " + week + " (" + date + ")")
+                        for timetable in data:
+                            if timetable["date"] == date:
+                                if timetable["subgroup"] == 0:
                                     if timetable["moodle"]:
                                         bot.send_message(message.chat.id,
                                                          text=(
@@ -596,6 +543,33 @@ def send_timetable_date(message):
                                                          text=(
                                                              f'Номер пары: {str(timetable["num"])}''\n'
                                                              f'Предмет: {timetable["subject_name"]}''\n'
+                                                             f'Подгруппа: Группа''\n'
+                                                             f'Время: {time_of_lessons[timetable["num"]]}''\n'
+                                                             f'Кабинет: {str(timetable["room_name"])}''\n'
+                                                             f'ФИО: {timetable["teacher_surname"]} '
+                                                             f'{timetable["teacher_name"]} '
+                                                             f'{timetable["teacher_secondname"]}'
+                                                         ))
+                                elif timetable["subgroup"] > 0 and subgroup == -1:
+                                    if timetable["moodle"]:
+                                        bot.send_message(message.chat.id,
+                                                         text=(
+                                                             f'Номер пары: {str(timetable["num"])}''\n'
+                                                             f'Предмет: {timetable["subject_name"]}''\n'
+                                                             f'Подгруппа: Группа''\n'
+                                                             f'Время: {time_of_lessons[timetable["num"]]}''\n'
+                                                             f'Кабинет: {str(timetable["room_name"])}''\n'
+                                                             f'Задача: {json.loads(timetable["moodle"])[0]["url"]}''\n'
+                                                             f'Ресурс: {json.loads(timetable["moodle"])[1]["url"]}''\n'
+                                                             f'ФИО: {timetable["teacher_surname"]} '
+                                                             f'{timetable["teacher_name"]} '
+                                                             f'{timetable["teacher_secondname"]}'
+                                                         ))
+                                    else:
+                                        bot.send_message(message.chat.id,
+                                                         text=(
+                                                             f'Номер пары: {str(timetable["num"])}''\n'
+                                                             f'Предмет: {timetable["subject_name"]}''\n'
                                                              f'Подгруппа: {str(timetable["subgroup"])}''\n'
                                                              f'Время: {time_of_lessons[timetable["num"]]}''\n'
                                                              f'Кабинет: {str(timetable["room_name"])}''\n'
@@ -603,11 +577,44 @@ def send_timetable_date(message):
                                                              f'{timetable["teacher_name"]} '
                                                              f'{timetable["teacher_secondname"]}'
                                                          ))
+
+                                elif timetable["subgroup"] > 0 and subgroup > 0:
+                                    if timetable["subgroup"] == subgroup:
+                                        if timetable["moodle"]:
+                                            bot.send_message(message.chat.id,
+                                                             text=(
+                                                                 f'Номер пары: {str(timetable["num"])}''\n'
+                                                                 f'Предмет: {timetable["subject_name"]}''\n'
+                                                                 f'Подгруппа: Группа''\n'
+                                                                 f'Время: {time_of_lessons[timetable["num"]]}''\n'
+                                                                 f'Кабинет: {str(timetable["room_name"])}''\n'
+                                                                 f'Задача: {str(timetable["moodle"][0]["url"])}''\n'
+                                                                 f'Ресурс: {str(timetable["moodle"][1]["url"])}''\n'
+                                                                 f'ФИО: {timetable["teacher_surname"]} '
+                                                                 f'{timetable["teacher_name"]} '
+                                                                 f'{timetable["teacher_secondname"]}'
+                                                             ))
+                                        else:
+                                            bot.send_message(message.chat.id,
+                                                             text=(
+                                                                 f'Номер пары: {str(timetable["num"])}''\n'
+                                                                 f'Предмет: {timetable["subject_name"]}''\n'
+                                                                 f'Подгруппа: {str(timetable["subgroup"])}''\n'
+                                                                 f'Время: {time_of_lessons[timetable["num"]]}''\n'
+                                                                 f'Кабинет: {str(timetable["room_name"])}''\n'
+                                                                 f'ФИО: {timetable["teacher_surname"]} '
+                                                                 f'{timetable["teacher_name"]} '
+                                                                 f'{timetable["teacher_secondname"]}'
+                                                             ))
+                        sleep(3.5)
+                else:
+                    bot.send_message(message.chat.id,
+                                     text="Расписание на " + week + " (" + date + ") отсутствует")
                     sleep(3.5)
-            else:
-                bot.send_message(message.chat.id,
-                                 text="Расписание на " + week + " (" + date + ") отсутствует")
-                sleep(3.5)
+    except ValueError:
+        bot.send_message(message.chat.id,
+                         text='Неверный формат даты, введите дату в формате ГГГГ-ММ-ДД')
+        bot.register_next_step_handler(message, send_timetable_date)
 
 
 @bot.message_handler(content_types=['send_news'])
