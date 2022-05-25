@@ -243,6 +243,20 @@ def get_subgroup(message):
 def send_timetable(timetable, subgroup, chat_id):
     if timetable["subgroup"] == 0:
         if timetable["moodle"]:
+            task = '-'
+            resource = '-'
+            meeting = '-'
+
+            for i in range(3):
+                if len(json.loads(timetable["moodle"])) != i:
+                    break
+                else:
+                    if json.loads(timetable["moodle"])[i]["type"] == "task":
+                        task = json.loads(timetable["moodle"])[i]["url"]
+                    if json.loads(timetable["moodle"])[i]["type"] == "resource":
+                        resource = json.loads(timetable["moodle"])[i]["url"]
+                    if json.loads(timetable["moodle"])[i]["type"] == "meeting":
+                        meeting = json.loads(timetable["moodle"])[i]["url"]
             bot.send_message(chat_id,
                  text=(
                      f'Номер пары: {str(timetable["num"])}''\n'
@@ -250,8 +264,9 @@ def send_timetable(timetable, subgroup, chat_id):
                      f'Подгруппа: Группа''\n'
                      f'Время: {time_of_lessons[timetable["num"]]}''\n'
                      f'Кабинет: {str(timetable["room_name"])}''\n'
-                     f'Задача: {str(timetable["moodle"][0]["url"])}''\n'
-                     f'Ресурс: {str(timetable["moodle"][1]["url"])}''\n'
+                     f'Конференция: {meeting}''\n'
+                     f'Задача: {task}''\n'
+                     f'Ресурс: {resource}''\n'
                      f'ФИО: {timetable["teacher_surname"]} '
                      f'{timetable["teacher_name"]} '
                      f'{timetable["teacher_secondname"]}'
@@ -270,6 +285,19 @@ def send_timetable(timetable, subgroup, chat_id):
                  ))
     elif timetable["subgroup"] > 0 and subgroup == -1:
         if timetable["moodle"]:
+            task = '-'
+            resource = '-'
+            meeting = '-'
+            for i in range(3):
+                if i > len(json.loads(timetable["moodle"])):
+                    break
+                else:
+                    if json.loads(timetable["moodle"])[i]["type"] == "task":
+                        task = json.loads(timetable["moodle"])[i]["url"]
+                    if json.loads(timetable["moodle"])[i]["type"] == "resource":
+                        resource = json.loads(timetable["moodle"])[i]["url"]
+                    if json.loads(timetable["moodle"])[i]["type"] == "meeting":
+                        meeting = json.loads(timetable["moodle"])[i]["url"]
             bot.send_message(chat_id,
                  text=(
                      f'Номер пары: {str(timetable["num"])}''\n'
@@ -277,8 +305,9 @@ def send_timetable(timetable, subgroup, chat_id):
                      f'Подгруппа: Группа''\n'
                      f'Время: {time_of_lessons[timetable["num"]]}''\n'
                      f'Кабинет: {str(timetable["room_name"])}''\n'
-                     f'Задача: {json.loads(timetable["moodle"])[0]["url"]}''\n'
-                     f'Ресурс: {json.loads(timetable["moodle"])[1]["url"]}''\n'
+                     f'Конференция: {meeting}''\n'
+                     f'Задача: {task}''\n'
+                     f'Ресурс: {resource}''\n'
                      f'ФИО: {timetable["teacher_surname"]} '
                      f'{timetable["teacher_name"]} '
                      f'{timetable["teacher_secondname"]}'
@@ -299,6 +328,21 @@ def send_timetable(timetable, subgroup, chat_id):
     elif timetable["subgroup"] > 0 and subgroup > 0:
         if timetable["subgroup"] == subgroup:
             if timetable["moodle"]:
+                task = '-'
+                resource = '-'
+                meeting = '-'
+                print(len(json.loads(timetable["moodle"])))
+                for i in range(3):
+                    if i >= len(json.loads(timetable["moodle"])):
+                        continue
+                    else:
+                        print(i)
+                        if json.loads(timetable["moodle"])[i]["type"] == "task":
+                            task = json.loads(timetable["moodle"])[i]["url"]
+                        if json.loads(timetable["moodle"])[i]["type"] == "resource":
+                            resource = json.loads(timetable["moodle"])[i]["url"]
+                        if json.loads(timetable["moodle"])[i]["type"] == "meeting":
+                            meeting = json.loads(timetable["moodle"])[i]["url"]
                 bot.send_message(chat_id,
                      text=(
                          f'Номер пары: {str(timetable["num"])}''\n'
@@ -306,8 +350,9 @@ def send_timetable(timetable, subgroup, chat_id):
                          f'Подгруппа: Группа''\n'
                          f'Время: {time_of_lessons[timetable["num"]]}''\n'
                          f'Кабинет: {str(timetable["room_name"])}''\n'
-                         f'Задача: {str(timetable["moodle"][0]["url"])}''\n'
-                         f'Ресурс: {str(timetable["moodle"][1]["url"])}''\n'
+                         f'Конференция: {meeting}''\n'
+                         f'Задача: {task}''\n'
+                         f'Ресурс: {resource}''\n'
                          f'ФИО: {timetable["teacher_surname"]} '
                          f'{timetable["teacher_name"]} '
                          f'{timetable["teacher_secondname"]}'
@@ -574,7 +619,7 @@ def send_refreshed_timetable():
             if dates_refreshed_timetable:
                 db_object.execute(
                     f"UPDATE timetable SET current_timetable = {Json(data)} WHERE group_id = {group_id[0]}")
-                db_connection.commit()
+                db_connection.commit()  
             for date in dates_refreshed_timetable:
                 db_object.execute(f"SELECT id FROM users WHERE group_id = {group_id[0]}")
                 chat_ids = db_object.fetchall()[0]
@@ -638,6 +683,6 @@ def menu(message):
 
 
 if __name__ == '__main__':
-    schedule.every(10).seconds.do(send_refreshed_timetable)
+    schedule.every(10).minutes.do(send_refreshed_timetable)
     Thread(target=schedule_checker).start()
     bot.polling()
