@@ -246,10 +246,9 @@ def send_timetable(timetable, subgroup, chat_id):
             task = '-'
             resource = '-'
             meeting = '-'
-
             for i in range(3):
-                if len(json.loads(timetable["moodle"])) != i:
-                    break
+                if i >= len(json.loads(timetable["moodle"])):
+                    continue
                 else:
                     if json.loads(timetable["moodle"])[i]["type"] == "task":
                         task = json.loads(timetable["moodle"])[i]["url"]
@@ -289,8 +288,8 @@ def send_timetable(timetable, subgroup, chat_id):
             resource = '-'
             meeting = '-'
             for i in range(3):
-                if i > len(json.loads(timetable["moodle"])):
-                    break
+                if i >= len(json.loads(timetable["moodle"])):
+                    continue
                 else:
                     if json.loads(timetable["moodle"])[i]["type"] == "task":
                         task = json.loads(timetable["moodle"])[i]["url"]
@@ -331,12 +330,10 @@ def send_timetable(timetable, subgroup, chat_id):
                 task = '-'
                 resource = '-'
                 meeting = '-'
-                print(len(json.loads(timetable["moodle"])))
                 for i in range(3):
                     if i >= len(json.loads(timetable["moodle"])):
                         continue
                     else:
-                        print(i)
                         if json.loads(timetable["moodle"])[i]["type"] == "task":
                             task = json.loads(timetable["moodle"])[i]["url"]
                         if json.loads(timetable["moodle"])[i]["type"] == "resource":
